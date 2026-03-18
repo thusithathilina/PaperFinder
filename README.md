@@ -26,7 +26,7 @@ The easiest way to run the app. Requires [Docker Desktop](https://www.docker.com
 
 ```bash
 git clone https://github.com/thusithathilina/PaperFinder.git
-cd paper-finder
+cd PaperFinder
 docker compose up --build
 ```
 
@@ -78,7 +78,7 @@ Browser
 ### Project Structure
 
 ```
-paper-finder/
+PaperFinder/
 ├── backend/
 │   ├── main.py                 # FastAPI app + CORS
 │   ├── routers/
