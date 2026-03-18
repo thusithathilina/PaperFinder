@@ -25,7 +25,7 @@ A research paper search tool that queries [DBLP](https://dblp.org) and filters r
 The easiest way to run the app. Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ```bash
-git clone https://github.com/your-username/paper-finder.git
+git clone https://github.com/thusithathilina/paper-finder.git
 cd paper-finder
 docker compose up --build
 ```
