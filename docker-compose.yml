@@ -1,0 +1,41 @@
+services:
+
+  backend:
+    build: ./backend
+    container_name: paperfinder-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - paperfinder
+
+  frontend:
+    build: ./frontend
+    container_name: paperfinder-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - paperfinder
+
+  startup-msg:
+    image: alpine
+    container_name: paperfinder-startup-msg
+    command: >
+      sh -c "echo '' &&
+             echo '========================================' &&
+             echo '  Paper Finder is running!' &&
+             echo '  App:   http://localhost' &&
+             echo '  Docs:  http://localhost:8000/docs' &&
+             echo '========================================'  "
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - paperfinder
+
+networks:
+  paperfinder:
+    driver: bridge
