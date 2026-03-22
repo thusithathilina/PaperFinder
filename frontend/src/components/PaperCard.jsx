@@ -3,7 +3,7 @@ const GROUP_COLORS = {
   ml: 'bg-violet-100 text-violet-700 border-violet-200',
 }
 
-export default function PaperCard({ paper, selected, onToggle }) {
+export default function PaperCard({ paper, selected, onToggle, inLibrary, onAddToLibrary }) {
   const isTopVenue = !!paper.venue_group
   const badgeColor = GROUP_COLORS[paper.venue_group] ?? 'bg-slate-100 text-slate-400 border-slate-200'
 
@@ -30,18 +30,15 @@ export default function PaperCard({ paper, selected, onToggle }) {
       </div>
 
       <div className="pr-8">
-        {/* Title */}
         <h3 className={`text-sm font-semibold leading-snug mb-2 ${isTopVenue ? 'text-slate-800' : 'text-slate-500'}`}>
           {paper.title}
         </h3>
 
-        {/* Authors */}
         <p className="text-xs text-slate-400 mb-2 truncate">
           {paper.authors.slice(0, 5).join(', ')}
           {paper.authors.length > 5 && ` +${paper.authors.length - 5} more`}
         </p>
 
-        {/* Venue + year + links */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs font-bold px-2 py-0.5 rounded border ${badgeColor}`}>
             {paper.venue}
@@ -51,25 +48,31 @@ export default function PaperCard({ paper, selected, onToggle }) {
           )}
           <span className="text-xs text-slate-400 font-mono">{paper.year}</span>
 
+          {/* Add to Library button */}
+          <button
+            onClick={e => { e.stopPropagation(); onAddToLibrary(paper) }}
+            className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-md border transition-colors
+              ${inLibrary
+                ? 'border-emerald-300 text-emerald-600 bg-emerald-50 cursor-default'
+                : 'border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
+              }`}
+            disabled={inLibrary}
+            title={inLibrary ? 'Already in library' : 'Add to library'}
+          >
+            {inLibrary ? '✓ Saved' : '+ Library'}
+          </button>
+
           {paper.url && (
-            <a
-              href={paper.url}
-              target="_blank"
-              rel="noreferrer"
+            <a href={paper.url} target="_blank" rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline ml-auto"
-            >
+              className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline">
               DBLP ↗
             </a>
           )}
           {paper.doi && (
-            <a
-              href={`https://doi.org/${paper.doi}`}
-              target="_blank"
-              rel="noreferrer"
+            <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
-            >
+              className="text-xs text-indigo-500 hover:text-indigo-700 hover:underline">
               DOI ↗
             </a>
           )}

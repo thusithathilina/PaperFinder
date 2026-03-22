@@ -2,11 +2,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import init_db
 from routers.papers import router as papers_router
+from routers.library import router as library_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
     print("\n" + "=" * 50)
     print("  Paper Finder backend ready")
     print("  API:    http://localhost:8000")
@@ -22,7 +25,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -35,8 +37,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(papers_router)
+app.include_router(library_router)
 
 
 @app.get("/health")

@@ -1,6 +1,10 @@
 import PaperCard from './PaperCard'
 
-export default function PaperList({ papers, selected, onToggle, onSelectAll, onClearAll, onExportSelected, onExportAll }) {
+export default function PaperList({
+  papers, selected, onToggle, onSelectAll, onClearAll,
+  onExportSelected, onExportAll,
+  libraryKeys, onAddToLibrary, onAddSelectedToLibrary,
+}) {
   const allSelected = papers.length > 0 && papers.every(p => selected.has(p.dblp_key))
   const noneSelected = selected.size === 0
 
@@ -8,7 +12,6 @@ export default function PaperList({ papers, selected, onToggle, onSelectAll, onC
 
   return (
     <div className="space-y-3">
-
       {/* Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
         <div className="flex items-center gap-3">
@@ -28,7 +31,15 @@ export default function PaperList({ papers, selected, onToggle, onSelectAll, onC
           </button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={onAddSelectedToLibrary}
+            disabled={noneSelected}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 text-emerald-600
+                       hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            + Add selected to Library
+          </button>
           <button
             onClick={onExportSelected}
             disabled={noneSelected}
@@ -55,10 +66,11 @@ export default function PaperList({ papers, selected, onToggle, onSelectAll, onC
             paper={paper}
             selected={selected.has(paper.dblp_key)}
             onToggle={() => onToggle(paper)}
+            inLibrary={libraryKeys.has(paper.dblp_key)}
+            onAddToLibrary={onAddToLibrary}
           />
         ))}
       </div>
-
     </div>
   )
 }

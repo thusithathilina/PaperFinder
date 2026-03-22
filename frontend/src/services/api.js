@@ -37,3 +37,29 @@ export function downloadBibtex(content, filename = 'papers.bib') {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// ── Library ──────────────────────────────────────────────────────────────────
+
+export async function fetchLibrary() {
+  const res = await fetch(`${BASE_URL}/library`)
+  if (!res.ok) throw new Error('Failed to fetch library')
+  return res.json()
+}
+
+export async function addToLibrary(papers) {
+  const res = await fetch(`${BASE_URL}/library`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ papers }),
+  })
+  if (!res.ok) throw new Error('Failed to add to library')
+  return res.json()
+}
+
+export async function removeFromLibrary(dblpKey) {
+  const res = await fetch(`${BASE_URL}/library/${encodeURIComponent(dblpKey)}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('Failed to remove from library')
+  return res.json()
+}
