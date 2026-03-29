@@ -14,7 +14,6 @@ build/
 .env
 .env.local
 .env.*.local
-!.env.example
 
 # Node / React
 node_modules/
@@ -34,3 +33,7 @@ Thumbs.db
 
 # Docker
 *.log
+
+# Persistent data (SQLite, vector DB) — keep the folder, ignore the contents
+data/*
+!data/.gitkeep

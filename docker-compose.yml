@@ -6,6 +6,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data    # persist SQLite (and later ChromaDB) outside the container
+    env_file:
+      - .env                # optional — user can set DB_PATH here
     networks:
       - paperfinder
 
@@ -29,6 +33,7 @@ services:
              echo '  Paper Finder is running!' &&
              echo '  App:   http://localhost' &&
              echo '  Docs:  http://localhost:8000/docs' &&
+             echo '  Data:  ./data/library.db' &&
              echo '========================================'  "
     depends_on:
       - frontend
