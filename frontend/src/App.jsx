@@ -1,17 +1,19 @@
-import { useState, useEffect, useCallback} from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import SearchBar from './components/SearchBar'
 import FilterPanel from './components/FilterPanel'
 import PaperList from './components/PaperList'
 import LibraryPage from './components/LibraryPage'
+import GraphTab from './components/GraphTab'
 import {
   fetchVenues, searchPapers, exportBibtex, downloadBibtex,
   fetchLibrary, addToLibrary,
 } from './services/api'
 
-const TABS = ['Search', 'Library']
+const TABS = ['Search', 'Graph', 'Library']
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Search')
+  const graphTabRef = useRef(null)
 
   // Venues
   const [venues, setVenues] = useState([])
@@ -34,6 +36,9 @@ export default function App() {
   const [libraryPapers, setLibraryPapers] = useState([])
   const [libraryKeys, setLibraryKeys] = useState(new Set())
   const [libraryMsg, setLibraryMsg] = useState(null)
+
+  // Graph
+  const [graphRootPaper, setGraphRootPaper] = useState(null)
 
   // ── Init ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -125,6 +130,12 @@ export default function App() {
     refreshLibrary()
   }
 
+  // ── Graph ───────────────────────────────────────────────────────────────────
+  function handleExploreGraph(paper) {
+    setGraphRootPaper(paper)
+    setActiveTab('Graph')
+  }
+
   // ── Export ──────────────────────────────────────────────────────────────────
   async function handleExportSelected() {
     const toExport = papers.filter(p => selected.has(p.dblp_key))
@@ -198,6 +209,16 @@ export default function App() {
           />
         )}
 
+        {/* ── Graph Tab ── */}
+        {activeTab === 'Graph' && (
+            <GraphTab
+                ref={graphTabRef}
+                rootPaper={graphRootPaper}
+                onRootPaperChange={setGraphRootPaper}
+                onAddToLibrary={handleAddToLibrary}
+            />
+        )}
+
         {/* ── Search Tab ── */}
         {activeTab === 'Search' && (
           <div className="flex gap-6">
@@ -252,6 +273,7 @@ export default function App() {
                   libraryKeys={libraryKeys}
                   onAddToLibrary={handleAddToLibrary}
                   onAddSelectedToLibrary={handleAddSelectedToLibrary}
+                  onExploreGraph={handleExploreGraph}
                 />
               )}
             </div>
