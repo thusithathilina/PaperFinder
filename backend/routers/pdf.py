@@ -1,5 +1,6 @@
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlmodel import Session, select
 
 from database import get_session
@@ -13,7 +14,6 @@ router = APIRouter(prefix="/api/pdf", tags=["pdf"])
 
 @router.get("/status/{dblp_key:path}")
 def get_pdf_status(dblp_key: str, session: Session = Depends(get_session)):
-    """Get the PDF status for a library paper."""
     paper = session.exec(
         select(LibraryPaper).where(LibraryPaper.dblp_key == dblp_key)
     ).first()
@@ -22,23 +22,39 @@ def get_pdf_status(dblp_key: str, session: Session = Depends(get_session)):
     return {"dblp_key": dblp_key, "pdf_status": paper.pdf_status}
 
 
+@router.get("/view/{dblp_key:path}")
+def view_pdf(dblp_key: str, session: Session = Depends(get_session)):
+    """Serve the PDF file for inline viewing in the browser."""
+    paper = session.exec(
+        select(LibraryPaper).where(LibraryPaper.dblp_key == dblp_key)
+    ).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not in library")
+    if paper.pdf_status not in ("available", "uploaded"):
+        raise HTTPException(status_code=404, detail="No PDF available for this paper")
+
+    path = get_pdf_path(dblp_key)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="PDF file not found on disk")
+
+    return FileResponse(
+        path=str(path),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={path.name}"}
+    )
+
+
 @router.post("/fetch/{dblp_key:path}")
 async def fetch_pdf(dblp_key: str, session: Session = Depends(get_session)):
-    """
-    Attempt to fetch an open-access PDF from Semantic Scholar.
-    Updates the paper's pdf_status in the library.
-    """
     paper = session.exec(
         select(LibraryPaper).where(LibraryPaper.dblp_key == dblp_key)
     ).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not in library")
 
-    # Already have it
     if paper.pdf_status in ("available", "uploaded"):
         return {"dblp_key": dblp_key, "pdf_status": paper.pdf_status}
 
-    # Mark as fetching
     paper.pdf_status = "fetching"
     session.add(paper)
     session.commit()
@@ -62,19 +78,15 @@ async def fetch_pdf(dblp_key: str, session: Session = Depends(get_session)):
 
 @router.post("/upload/{dblp_key:path}")
 async def upload_pdf(
-    dblp_key: str,
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session),
+        dblp_key: str,
+        file: UploadFile = File(...),
+        session: Session = Depends(get_session),
 ):
-    """
-    Upload a local PDF for a library paper.
-    """
     paper = session.exec(
         select(LibraryPaper).where(LibraryPaper.dblp_key == dblp_key)
     ).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not in library")
-
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="File must be a PDF")
 

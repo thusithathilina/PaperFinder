@@ -96,3 +96,8 @@ export async function uploadPdf(dblpKey, file) {
   if (!res.ok) throw new Error('Failed to upload PDF')
   return res.json()
 }
+
+export function getPdfViewUrl(dblpKey) {
+  const base = import.meta.env.VITE_API_URL ?? '/api'
+  return `${base}/pdf/view/${encodeURIComponent(dblpKey)}`
+}
