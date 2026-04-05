@@ -4,6 +4,7 @@ export default function PaperList({
   papers, selected, onToggle, onSelectAll, onClearAll,
   onExportSelected, onExportAll,
   libraryKeys, onAddToLibrary, onAddSelectedToLibrary,
+  onExploreGraph,
 }) {
   const allSelected = papers.length > 0 && papers.every(p => selected.has(p.dblp_key))
   const noneSelected = selected.size === 0
@@ -68,6 +69,7 @@ export default function PaperList({
             onToggle={() => onToggle(paper)}
             inLibrary={libraryKeys.has(paper.dblp_key)}
             onAddToLibrary={onAddToLibrary}
+            onExploreGraph={onExploreGraph}
           />
         ))}
       </div>

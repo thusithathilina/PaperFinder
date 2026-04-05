@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import init_db
 from routers.papers import router as papers_router
 from routers.library import router as library_router
+from routers.graph import router as graph_router
+from routers.pdf import router as pdf_router
 
 
 @asynccontextmanager
@@ -39,6 +41,8 @@ app.add_middleware(
 
 app.include_router(papers_router)
 app.include_router(library_router)
+app.include_router(graph_router)
+app.include_router(pdf_router)
 
 
 @app.get("/health")

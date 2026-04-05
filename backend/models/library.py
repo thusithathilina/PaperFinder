@@ -17,6 +17,10 @@ class LibraryPaper(SQLModel, table=True):
     doi: Optional[str] = None
     added_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # PDF fields
+    pdf_status: str = Field(default="none")  # none | fetching | available | not_found | uploaded
+    pdf_path: Optional[str] = None
+
 
 class LibraryAddRequest(SQLModel):
     """Request body for adding one or more papers to the library."""

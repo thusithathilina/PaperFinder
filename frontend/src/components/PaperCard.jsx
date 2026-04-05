@@ -3,7 +3,7 @@ const GROUP_COLORS = {
   ml: 'bg-violet-100 text-violet-700 border-violet-200',
 }
 
-export default function PaperCard({ paper, selected, onToggle, inLibrary, onAddToLibrary }) {
+export default function PaperCard({ paper, selected, onToggle, inLibrary, onAddToLibrary, onExploreGraph }) {
   const isTopVenue = !!paper.venue_group
   const badgeColor = GROUP_COLORS[paper.venue_group] ?? 'bg-slate-100 text-slate-400 border-slate-200'
 
@@ -48,19 +48,32 @@ export default function PaperCard({ paper, selected, onToggle, inLibrary, onAddT
           )}
           <span className="text-xs text-slate-400 font-mono">{paper.year}</span>
 
-          {/* Add to Library button */}
-          <button
-            onClick={e => { e.stopPropagation(); onAddToLibrary(paper) }}
-            className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-md border transition-colors
-              ${inLibrary
-                ? 'border-emerald-300 text-emerald-600 bg-emerald-50 cursor-default'
-                : 'border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
-              }`}
-            disabled={inLibrary}
-            title={inLibrary ? 'Already in library' : 'Add to library'}
-          >
-            {inLibrary ? '✓ Saved' : '+ Library'}
-          </button>
+          {/* Action buttons */}
+          <div className="ml-auto flex items-center gap-1.5">
+            {/* Explore Graph */}
+            <button
+              onClick={e => { e.stopPropagation(); onExploreGraph(paper) }}
+              className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-200 text-slate-400
+                         hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+              title="Explore citation graph"
+            >
+              ⬡ Graph
+            </button>
+
+            {/* Add to Library */}
+            <button
+              onClick={e => { e.stopPropagation(); onAddToLibrary(paper) }}
+              disabled={inLibrary}
+              className={`text-xs font-semibold px-2 py-0.5 rounded-md border transition-colors
+                ${inLibrary
+                  ? 'border-emerald-300 text-emerald-600 bg-emerald-50 cursor-default'
+                  : 'border-slate-200 text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
+                }`}
+              title={inLibrary ? 'Already in library' : 'Add to library'}
+            >
+              {inLibrary ? '✓ Saved' : '+ Library'}
+            </button>
+          </div>
 
           {paper.url && (
             <a href={paper.url} target="_blank" rel="noreferrer"

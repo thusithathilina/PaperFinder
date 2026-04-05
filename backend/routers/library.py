@@ -35,6 +35,8 @@ def _db_to_dict(p: LibraryPaper) -> dict:
         "url": p.url,
         "doi": p.doi,
         "added_at": p.added_at.isoformat(),
+        "pdf_status": p.pdf_status,
+        "pdf_path": p.pdf_path,
     }
 
 

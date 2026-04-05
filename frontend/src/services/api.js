@@ -12,7 +12,6 @@ export async function searchPapers({ query, venues, yearFrom, yearTo, includeOth
   if (yearFrom) params.set('year_from', yearFrom)
   if (yearTo) params.set('year_to', yearTo)
   if (includeOthers) params.set('include_others', 'true')
-
   const res = await fetch(`${BASE_URL}/search?${params}`)
   if (!res.ok) throw new Error('Search failed')
   return res.json()
@@ -61,5 +60,39 @@ export async function removeFromLibrary(dblpKey) {
     method: 'DELETE',
   })
   if (!res.ok) throw new Error('Failed to remove from library')
+  return res.json()
+}
+
+// ── Citation Graph ────────────────────────────────────────────────────────────
+
+export async function expandNode(title, doi = null) {
+  const res = await fetch(`${BASE_URL}/graph/expand`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, doi }),
+  })
+  if (res.status === 404) throw new Error('NOT_FOUND')
+  if (!res.ok) throw new Error('Graph expansion failed')
+  return res.json()
+}
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+
+export async function fetchPdf(dblpKey) {
+  const res = await fetch(`${BASE_URL}/pdf/fetch/${encodeURIComponent(dblpKey)}`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error('Failed to fetch PDF')
+  return res.json()
+}
+
+export async function uploadPdf(dblpKey, file) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE_URL}/pdf/upload/${encodeURIComponent(dblpKey)}`, {
+    method: 'POST',
+    body: form,
+  })
+  if (!res.ok) throw new Error('Failed to upload PDF')
   return res.json()
 }

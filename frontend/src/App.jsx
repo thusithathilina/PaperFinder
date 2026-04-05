@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback} from 'react'
 import SearchBar from './components/SearchBar'
 import FilterPanel from './components/FilterPanel'
 import PaperList from './components/PaperList'
@@ -33,7 +33,7 @@ export default function App() {
   // Library
   const [libraryPapers, setLibraryPapers] = useState([])
   const [libraryKeys, setLibraryKeys] = useState(new Set())
-  const [libraryMsg, setLibraryMsg] = useState(null)  // { type: 'success'|'warn', text }
+  const [libraryMsg, setLibraryMsg] = useState(null)
 
   // ── Init ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -137,7 +137,6 @@ export default function App() {
     downloadBibtex(bib, 'all-papers.bib')
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
 
@@ -180,13 +179,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* Library message toast */}
+      {/* Toast */}
       {libraryMsg && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all
-          ${libraryMsg.type === 'success'
-            ? 'bg-emerald-600 text-white'
-            : 'bg-amber-500 text-white'
-          }`}>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium
+          ${libraryMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
           {libraryMsg.text}
         </div>
       )}
