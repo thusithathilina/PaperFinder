@@ -1,19 +1,12 @@
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import ForceGraph2D from 'react-force-graph-2d'
 
 const COLORS = {
-  root:     '#4f46e5',  // indigo   — selected/root paper
-  security: '#e11d48',  // rose     — top security venue
-  ml:       '#7c3aed',  // violet   — top ML venue
-  expanded: '#0891b2',  // cyan     — already expanded node
-  other:    '#94a3b8',  // slate    — unknown venue
-}
-
-const VENUE_GROUP_MAP = {
-  'conf/ndss': 'security', 'conf/sp': 'security',
-  'conf/uss': 'security',  'conf/ccs': 'security',
-  'conf/nips': 'ml', 'conf/icml': 'ml',
-  'conf/iclr': 'ml', 'conf/aaai': 'ml',
+  root:     '#4f46e5',
+  security: '#e11d48',
+  ml:       '#7c3aed',
+  expanded: '#0891b2',
+  other:    '#94a3b8',
 }
 
 function guessGroup(venue = '') {
@@ -36,10 +29,17 @@ function nodeSize(node) {
   return Math.min(4 + Math.sqrt(total) * 0.4, 12)
 }
 
+function applyForces(fg) {
+  if (!fg) return
+  fg.d3Force('charge').strength(-600)
+  fg.d3Force('link').distance(180)
+  fg.d3Force('collision', null) // clear first
+  fg.d3ReheatSimulation()
+}
+
 export default function CitationGraph({ rootPaper, onAddToLibrary }) {
   const fgRef = useRef()
 
-  // Graph data
   const [nodes, setNodes] = useState(() => [{
     id: rootPaper.ss_id || rootPaper.title,
     ...rootPaper,
@@ -51,6 +51,16 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
   const [loading, setLoading] = useState(false)
   const [selectedNode, setSelectedNode] = useState(null)
   const [error, setError] = useState(null)
+
+  // Tune forces after mount
+  useEffect(() => {
+    applyForces(fgRef.current)
+  }, [])
+
+  // Re-heat simulation when new nodes are added
+  useEffect(() => {
+    if (nodes.length > 1) applyForces(fgRef.current)
+  }, [nodes.length])
 
   const handleNodeClick = useCallback(async (node) => {
     setSelectedNode(node)
@@ -108,7 +118,6 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
   return (
       <div className="flex gap-4 h-[calc(100vh-12rem)]">
 
-        {/* Graph canvas */}
         <div className="flex-1 bg-slate-900 rounded-xl overflow-hidden relative">
           {loading && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow">
@@ -121,7 +130,6 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
               </div>
           )}
 
-          {/* Legend */}
           <div className="absolute bottom-3 left-3 z-10 bg-slate-800/80 backdrop-blur rounded-lg p-2.5 space-y-1.5">
             {[
               { color: COLORS.root,     label: 'Selected paper' },
@@ -156,35 +164,33 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
                 ctx.arc(node.x, node.y, r, 0, 2 * Math.PI)
                 ctx.fillStyle = nodeColor(node)
                 ctx.fill()
-                if (node.isRoot || globalScale > 1.5) {
-                  ctx.font = `${Math.max(8, 10 / globalScale)}px sans-serif`
+                // Only show labels on root or when zoomed in
+                if (node.isRoot || globalScale > 2) {
+                  const label = node.title.length > 30
+                      ? node.title.slice(0, 30) + '…'
+                      : node.title
+                  ctx.font = `${Math.max(6, 9 / globalScale)}px sans-serif`
                   ctx.fillStyle = '#e2e8f0'
                   ctx.textAlign = 'center'
-                  ctx.fillText(
-                      node.title.length > 30 ? node.title.slice(0, 30) + '…' : node.title,
-                      node.x, node.y + r + 6
-                  )
+                  ctx.fillText(label, node.x, node.y + r + 8)
                 }
               }}
           />
         </div>
 
-        {/* Node info panel */}
-        <div className="w-72 flex-shrink-0 space-y-3">
+        <div className="w-72 flex-shrink-0 space-y-3 overflow-y-auto">
           {selectedNode ? (
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Selected paper</p>
                   <h3 className="text-sm font-semibold text-slate-800 leading-snug">{selectedNode.title}</h3>
                 </div>
-
                 {selectedNode.authors?.length > 0 && (
                     <p className="text-xs text-slate-500">
                       {selectedNode.authors.slice(0, 3).join(', ')}
                       {selectedNode.authors.length > 3 && ` +${selectedNode.authors.length - 3} more`}
                     </p>
                 )}
-
                 <div className="flex gap-2 flex-wrap">
                   {selectedNode.venue && (
                       <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
@@ -195,12 +201,10 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
                       <span className="text-xs text-slate-400 font-mono">{selectedNode.year}</span>
                   )}
                 </div>
-
                 <div className="flex gap-3 text-xs text-slate-500">
                   <span>📥 {selectedNode.citation_count ?? '?'} citations</span>
                   <span>📤 {selectedNode.reference_count ?? '?'} refs</span>
                 </div>
-
                 <div className="flex flex-col gap-2 pt-1">
                   {!expandedIds.has(selectedNode.id) && (
                       <button
@@ -210,6 +214,9 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
                       >
                         {loading ? 'Loading…' : 'Expand connections'}
                       </button>
+                  )}
+                  {expandedIds.has(selectedNode.id) && (
+                      <p className="text-xs text-center text-cyan-600 font-medium">✓ Already expanded</p>
                   )}
                   <button
                       onClick={() => onAddToLibrary({
@@ -244,8 +251,6 @@ export default function CitationGraph({ rootPaper, onAddToLibrary }) {
                 <p className="text-xs mt-1">to see paper details and expand connections</p>
               </div>
           )}
-
-          {/* Stats */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Graph stats</p>
             <p className="text-xs text-slate-600">{nodes.length} papers · {links.length} connections</p>
