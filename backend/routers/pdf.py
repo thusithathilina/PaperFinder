@@ -1,3 +1,4 @@
+import json
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
@@ -5,11 +6,26 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models.library import LibraryPaper
-from services.pdf_fetcher import (
-    fetch_and_save, pdf_exists, get_pdf_path, sanitise_key
-)
+from services.pdf_fetcher import fetch_and_save, get_pdf_path
+from services.rag import ingest_paper
 
 router = APIRouter(prefix="/api/pdf", tags=["pdf"])
+
+
+async def _ingest_if_available(paper: LibraryPaper):
+    """Auto-ingest into RAG after PDF is saved."""
+    pdf_path = get_pdf_path(paper.dblp_key)
+    if not pdf_path.exists():
+        return
+    metadata = {
+        "dblp_key": paper.dblp_key,
+        "title": paper.title,
+        "authors": json.loads(paper.authors),
+        "year": paper.year,
+        "venue": paper.venue,
+    }
+    result = await ingest_paper(str(pdf_path), metadata)
+    print(f"Auto-ingested {paper.dblp_key}: {result}")
 
 
 @router.get("/status/{dblp_key:path}")
@@ -31,7 +47,7 @@ def view_pdf(dblp_key: str, session: Session = Depends(get_session)):
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not in library")
     if paper.pdf_status not in ("available", "uploaded"):
-        raise HTTPException(status_code=404, detail="No PDF available for this paper")
+        raise HTTPException(status_code=404, detail="No PDF available")
 
     path = get_pdf_path(dblp_key)
     if not path.exists():
@@ -69,10 +85,15 @@ async def fetch_pdf(dblp_key: str, session: Session = Depends(get_session)):
         paper.pdf_path = result.get("path")
     except Exception as e:
         paper.pdf_status = "not_found"
-        print(f"PDF fetch error for {dblp_key}: {e}")
+        print(f"PDF fetch error: {e}")
 
     session.add(paper)
     session.commit()
+
+    # Auto-ingest into RAG if PDF was obtained
+    if paper.pdf_status in ("available", "uploaded"):
+        await _ingest_if_available(paper)
+
     return {"dblp_key": dblp_key, "pdf_status": paper.pdf_status}
 
 
@@ -99,5 +120,8 @@ async def upload_pdf(
     paper.pdf_path = str(path)
     session.add(paper)
     session.commit()
+
+    # Auto-ingest into RAG
+    await _ingest_if_available(paper)
 
     return {"dblp_key": dblp_key, "pdf_status": "uploaded", "filename": file.filename}

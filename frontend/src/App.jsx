@@ -4,12 +4,13 @@ import FilterPanel from './components/FilterPanel'
 import PaperList from './components/PaperList'
 import LibraryPage from './components/LibraryPage'
 import GraphTab from './components/GraphTab'
+import RAGTab from './components/RAGTab'
 import {
   fetchVenues, searchPapers, exportBibtex, downloadBibtex,
   fetchLibrary, addToLibrary,
 } from './services/api'
 
-const TABS = ['Search', 'Graph', 'Library']
+const TABS = ['Search', 'Graph', 'Library', 'Q&A']
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Search')
@@ -279,6 +280,7 @@ export default function App() {
             </div>
           </div>
         )}
+        {activeTab === 'Q&A' && <RAGTab />}
 
       </main>
     </div>

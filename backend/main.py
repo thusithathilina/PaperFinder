@@ -7,6 +7,7 @@ from routers.papers import router as papers_router
 from routers.library import router as library_router
 from routers.graph import router as graph_router
 from routers.pdf import router as pdf_router
+from routers.rag import router as rag_router
 
 
 @asynccontextmanager
@@ -43,6 +44,7 @@ app.include_router(papers_router)
 app.include_router(library_router)
 app.include_router(graph_router)
 app.include_router(pdf_router)
+app.include_router(rag_router)
 
 
 @app.get("/health")
