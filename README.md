@@ -1,8 +1,8 @@
 # 📄 Paper Finder
 
-A research paper search tool that queries [DBLP](https://dblp.org) and filters results to top-tier security and ML venues. Select papers and export them as BibTeX in one click.
+A research paper search and Q&A tool. Search top security and ML conference papers via DBLP, build a personal library, and ask questions over your papers using a local LLM.
 
-![Paper Finder](https://img.shields.io/badge/stack-FastAPI%20%2B%20React-blue)
+![Stack](https://img.shields.io/badge/stack-FastAPI%20%2B%20React-blue)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -10,19 +10,25 @@ A research paper search tool that queries [DBLP](https://dblp.org) and filters r
 
 ## ✨ Features
 
-- 🔍 Search DBLP by keyword with real-time results
+- 🔍 Search DBLP by keyword
 - 🔒 Filter to **Top Security 4** — NDSS, S&P, USENIX Security, CCS
 - 🧠 Filter to **Top ML 4** — NeurIPS, ICML, ICLR, AAAI
-- 🌐 Optionally show all other venues (greyed out for context)
+- 🌐 Optionally show all other venues
 - 📅 Filter by year range
-- ☑️ Select individual papers or select all
-- 📥 Export selected or all results as `.bib` (BibTeX)
+- 📥 Export selected papers as BibTeX (`.bib`)
+- 📚 Personal library with SQLite persistence
+- 🔗 Citation graph explorer (references + citations via Semantic Scholar)
+- 📄 Fetch open-access PDFs automatically (ArXiv + Semantic Scholar)
+- 📎 Upload local PDFs
+- 🤖 Ask questions over your papers using Llama 3 (fully local RAG)
 
 ---
 
 ## 🚀 Quick Start (Docker)
 
-The easiest way to run the app. Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+> **First run downloads the Llama 3 model (~4.7GB). Subsequent runs are instant.**
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ```bash
 git clone https://github.com/thusithathilina/PaperFinder.git
@@ -30,14 +36,23 @@ cd PaperFinder
 docker compose up --build
 ```
 
-Then open **http://localhost** in your browser.
+- **App**: http://localhost
+- **API docs**: http://localhost:8000/docs
 
-- App: http://localhost
-- API docs: http://localhost:8000/docs
+On first run the `ollama-init` container will pull Llama 3 automatically. You'll see:
+```
+Llama 3 model ready
+```
+in the logs when it's done. The model is stored in a named Docker volume and persists across rebuilds.
 
 ---
 
 ## 🛠️ Local Development
+
+### Prerequisites
+- Python 3.12+
+- Node.js 22.12+
+- [Ollama](https://ollama.com) installed
 
 ### Backend
 
@@ -49,9 +64,6 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-API will be available at **http://localhost:8000**
-Interactive docs at **http://localhost:8000/docs**
-
 ### Frontend
 
 ```bash
@@ -60,9 +72,19 @@ npm install
 npm run dev
 ```
 
-App will be available at **http://localhost:5173**
+### Ollama (separate terminal)
 
-> Both servers must be running simultaneously for the app to work locally.
+```bash
+ollama serve
+ollama pull llama3   # first time only
+```
+
+| Service | URL |
+|---------|-----|
+| App | http://localhost:5173 |
+| API | http://localhost:8000 |
+| Docs | http://localhost:8000/docs |
+| Ollama | http://localhost:11434 |
 
 ---
 
@@ -73,6 +95,18 @@ Browser
   └── Nginx :80
         ├── /api/*  →  FastAPI backend :8000
         └── /*      →  React static files
+
+FastAPI backend
+  ├── DBLP API          — paper search
+  ├── Semantic Scholar  — citation graph + PDF URLs
+  ├── SQLite            — library persistence (data/library.db)
+  ├── ChromaDB          — vector store (data/chroma/)
+  └── Ollama            — local LLM (llama3)
+
+data/
+  ├── library.db        — SQLite database
+  ├── pdfs/             — downloaded/uploaded PDFs
+  └── chroma/           — ChromaDB vector store
 ```
 
 ### Project Structure
@@ -80,31 +114,60 @@ Browser
 ```
 PaperFinder/
 ├── backend/
-│   ├── main.py                 # FastAPI app + CORS
-│   ├── routers/
-│   │   └── papers.py           # /api/search, /api/venues, /api/export/bibtex
-│   ├── services/
-│   │   ├── dblp.py             # DBLP API integration
-│   │   ├── bibtex.py           # BibTeX generation
-│   │   └── venues.py           # Venue registry (keys, groups, display names)
+│   ├── main.py
+│   ├── database.py
 │   ├── models/
-│   │   └── paper.py            # Pydantic models
+│   │   └── library.py
+│   ├── routers/
+│   │   ├── papers.py       # DBLP search + BibTeX export
+│   │   ├── library.py      # library CRUD
+│   │   ├── graph.py        # citation graph
+│   │   ├── pdf.py          # PDF fetch/upload/view
+│   │   └── rag.py          # RAG ingest + query
+│   ├── services/
+│   │   ├── dblp.py
+│   │   ├── venues.py
+│   │   ├── bibtex.py
+│   │   ├── semantic_scholar.py
+│   │   ├── pdf_fetcher.py
+│   │   ├── pdf_parser.py
+│   │   ├── vector_store.py
+│   │   └── rag.py
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx             # Root component + state
+│   │   ├── App.jsx
 │   │   ├── components/
 │   │   │   ├── SearchBar.jsx
 │   │   │   ├── FilterPanel.jsx
 │   │   │   ├── PaperList.jsx
-│   │   │   └── PaperCard.jsx
+│   │   │   ├── PaperCard.jsx
+│   │   │   ├── LibraryPage.jsx
+│   │   │   ├── CitationGraph.jsx
+│   │   │   ├── GraphTab.jsx
+│   │   │   └── RAGTab.jsx
 │   │   └── services/
-│   │       └── api.js          # Backend API calls
-│   ├── nginx.conf              # Nginx config + reverse proxy
-│   └── Dockerfile              # Multi-stage: Node build → Nginx serve
-└── docker-compose.yml
+│   │       └── api.js
+│   ├── nginx.conf
+│   └── Dockerfile
+├── data/               # persisted data (gitignored)
+│   ├── library.db
+│   ├── pdfs/
+│   └── chroma/
+├── docker-compose.yml
+└── README.md
 ```
+
+---
+
+## 🤖 RAG Pipeline
+
+1. Add papers to your library via search
+2. Click **🔍 Fetch PDF** — auto-fetches open-access PDF (ArXiv, Semantic Scholar)
+3. Or **📎 Upload PDF** for paywalled papers
+4. PDF is automatically parsed, chunked, and embedded into ChromaDB
+5. Switch to **Q&A tab** and ask questions — Llama 3 answers using retrieved context
 
 ---
 
@@ -112,11 +175,18 @@ PaperFinder/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/venues` | List all supported venues and presets |
-| `GET` | `/api/search?q=...` | Search papers (supports `venues`, `year_from`, `year_to`, `include_others`) |
-| `POST` | `/api/export/bibtex` | Export a list of papers as `.bib` |
-
-Full interactive docs available at `/docs` when running.
+| `GET` | `/api/venues` | List supported venues |
+| `GET` | `/api/search?q=...` | Search papers |
+| `POST` | `/api/export/bibtex` | Export BibTeX |
+| `GET` | `/api/library` | Get library |
+| `POST` | `/api/library` | Add to library |
+| `DELETE` | `/api/library/{key}` | Remove from library |
+| `POST` | `/api/pdf/fetch/{key}` | Fetch PDF from open access |
+| `POST` | `/api/pdf/upload/{key}` | Upload local PDF |
+| `GET` | `/api/pdf/view/{key}` | View PDF in browser |
+| `POST` | `/api/graph/expand` | Get citation graph connections |
+| `GET` | `/api/rag/status` | RAG ingestion status |
+| `POST` | `/api/rag/query` | Ask a question |
 
 ---
 
@@ -140,18 +210,40 @@ Full interactive docs available at `/docs` when running.
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python, FastAPI, httpx |
+| Database | SQLite via SQLModel |
+| Vector store | ChromaDB |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
+| LLM | Llama 3 via Ollama (local) |
+| PDF parsing | PyMuPDF |
 | Frontend | React, Vite, Tailwind CSS |
 | Serving | Nginx (reverse proxy + static files) |
 | Containerisation | Docker, Docker Compose |
-| Data source | [DBLP API](https://dblp.org/faq/How+to+use+the+dblp+search+API.html) |
+| Data sources | DBLP API, Semantic Scholar API |
+
+---
+
+## ⚙️ Configuration
+
+Copy `.env.example` to `.env` to customise:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_PATH` | `data/library.db` | Custom SQLite path |
+| `DATA_DIR` | `data` | Root data directory |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
 
 ---
 
 ## 📝 Notes
 
-- DBLP's `stream:` venue filter does not work via their public API (only in the web UI). This tool fetches broad results and filters by venue key client-side.
-- Results are capped at 1000 per query (DBLP's maximum).
-- BibTeX cite keys are generated as `authorYEARword` (e.g. `smith2023adversarial`).
+- DBLP's `stream:` venue filter doesn't work via their API — results are post-filtered by venue key
+- PDF availability depends on open-access status — ArXiv papers are most reliably fetched
+- Llama 3 requires ~8GB RAM; use Mistral 7B for lower memory usage (change `OLLAMA_MODEL` in `rag.py`)
+- Citation graph clicks don't work in Brave browser due to a canvas pointer event bug — use Firefox or Chrome
 
 ---
 

@@ -7,6 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install build tools and dependencies needed for C++ compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        g++ \
+        cmake \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first (better layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

@@ -1,5 +1,35 @@
 services:
 
+  ollama:
+    image: ollama/ollama
+    container_name: paperfinder-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama    # persist downloaded models
+    networks:
+      - paperfinder
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-init:
+    image: ollama/ollama
+    container_name: paperfinder-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: >
+      sh -c "ollama pull llama3 && echo 'Llama 3 model ready'"
+    networks:
+      - paperfinder
+    restart: "no"   # run once only
+
   backend:
     build: ./backend
     container_name: paperfinder-backend
@@ -7,9 +37,15 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data    # persist SQLite (and later ChromaDB) outside the container
+      - ./data:/app/data
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - DATA_DIR=/app/data
     env_file:
-      - .env                # optional — user can set DB_PATH here
+      - .env
+    depends_on:
+      ollama:
+        condition: service_healthy
     networks:
       - paperfinder
 
@@ -33,7 +69,7 @@ services:
              echo '  Paper Finder is running!' &&
              echo '  App:   http://localhost' &&
              echo '  Docs:  http://localhost:8000/docs' &&
-             echo '  Data:  ./data/library.db' &&
+             echo '  Note:  First run pulls Llama 3 (~4.7GB)' &&
              echo '========================================'  "
     depends_on:
       - frontend
@@ -44,3 +80,6 @@ services:
 networks:
   paperfinder:
     driver: bridge
+
+volumes:
+  ollama_models:    # named volume — persists Llama model across rebuilds

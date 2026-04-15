@@ -2,13 +2,18 @@
 RAG orchestration service.
 
 Ties together: PDF parsing → vector store ingestion → LLM querying.
+Ollama host is configurable via OLLAMA_HOST env variable.
+  - Local dev: http://localhost:11434 (default)
+  - Docker:    http://ollama:11434 (set via docker-compose environment)
 """
 
+import os
 import ollama
 from services.pdf_parser import parse_pdf
 from services.vector_store import ingest_chunks, query as vector_query
 
 OLLAMA_MODEL = "llama3"
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 SYSTEM_PROMPT = """You are a research assistant helping a researcher understand academic papers.
 Answer questions based ONLY on the provided context from the papers.
@@ -16,31 +21,26 @@ If the answer is not in the context, say so clearly.
 Be concise and precise. Cite the paper title when referring to specific findings."""
 
 
+def get_ollama_client():
+    return ollama.Client(host=OLLAMA_HOST)
+
+
 def build_context(chunks: list[dict]) -> str:
-    """Format retrieved chunks into a context string for the LLM."""
     parts = []
     seen_papers = set()
-
     for chunk in chunks:
         meta = chunk["metadata"]
         title = meta.get("title", "Unknown")
         year = meta.get("year", "")
         text = chunk["text"]
-
         if title not in seen_papers:
             seen_papers.add(title)
             parts.append(f"--- From: {title} ({year}) ---")
-
         parts.append(text)
-
     return "\n\n".join(parts)
 
 
 async def ingest_paper(pdf_path: str, metadata: dict) -> dict:
-    """
-    Parse a PDF and ingest it into the vector store.
-    Returns { chunks_added, status }
-    """
     try:
         chunks = parse_pdf(pdf_path, metadata)
         count = ingest_chunks(chunks)
@@ -51,14 +51,6 @@ async def ingest_paper(pdf_path: str, metadata: dict) -> dict:
 
 
 async def answer_question(question: str, n_chunks: int = 5) -> dict:
-    """
-    Full RAG pipeline:
-    1. Retrieve relevant chunks from vector store
-    2. Build context
-    3. Ask LLM
-    Returns { answer, sources, chunks_used }
-    """
-    # Retrieve
     chunks = vector_query(question, n_results=n_chunks)
     if not chunks:
         return {
@@ -67,10 +59,7 @@ async def answer_question(question: str, n_chunks: int = 5) -> dict:
             "chunks_used": 0,
         }
 
-    # Build context
     context = build_context(chunks)
-
-    # Query Ollama
     prompt = f"""Context from research papers:
 
 {context}
@@ -80,7 +69,8 @@ Question: {question}
 Answer based on the context above:"""
 
     try:
-        response = ollama.chat(
+        client = get_ollama_client()
+        response = client.chat(
             model=OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -90,12 +80,11 @@ Answer based on the context above:"""
         answer = response["message"]["content"]
     except Exception as e:
         return {
-            "answer": f"LLM error: {str(e)}. Make sure Ollama is running with `ollama serve` and llama3 is pulled.",
+            "answer": f"LLM error: {str(e)}. Make sure Ollama is running (`ollama serve`) and llama3 is pulled (`ollama pull llama3`).",
             "sources": [],
             "chunks_used": 0,
         }
 
-    # Deduplicate sources
     sources = []
     seen = set()
     for chunk in chunks:
